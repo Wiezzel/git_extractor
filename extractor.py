@@ -23,8 +23,8 @@ FIELDNAMES = (DATE, ID, SUMMARY, LINK)
 
 def parse_commits(
         repos: Iterable[str],
-        since: str,
-        until: str,
+        since: 'datetime',
+        until: 'datetime',
 ) -> Iterable[dict]:
     for repo_path in repos:
         try:
@@ -40,13 +40,16 @@ def parse_commits(
         for commit in repo.iter_commits(
                 branch,
                 author=author,
-                since=since,
-                until=until,
                 no_merges=True
         ):
+            commit_date = date.fromtimestamp(commit.authored_date)
+            # Not using since/until params for iter_commits because they rely on *commit* date,
+            # while it's the *author* date that we want.
+            if not (since.date() <= commit_date <= until.date()):
+                continue
             commit_id = commit.hexsha[:7]  # Seven chars is enough
             yield {
-                DATE: date.fromtimestamp(commit.committed_date),
+                DATE: commit_date,
                 ID: commit_id,
                 SUMMARY: commit.summary,
                 LINK: f'{base_url}/commit/{commit_id}'
